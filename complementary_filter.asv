@@ -1,0 +1,75 @@
+%% Descrição do código
+%{
+Autor: William Santos
+Ano: 2020
+
+Objetivo do código:
+- Realizar o filtro complementar dos dados do giroscópio e do acelerômetro. 
+
+Configurações necessárias:
+- Você pode alterar o valor de "a" se desejado, esse valor indica a
+contribuição do giroscópio e do acelerômetro para o filtro. Você pode
+alterar esse valor até estar em um nível adequado. 
+
+Funções Utilizadas: 
+- Utilizamos 3 funções nesse código
+    1. read_mpu_arq (Responsável por ler os dados de um arquivo csv, que
+    contenha os dados do giroscópio e acelerômetro)
+    2. bias_calculation (Responsável por ler os dados 
+%}
+function complementary_filter()
+clc;
+%% SETUP
+    display('O próximo arquivo é para leitura dos dados');
+[accx accy accz gyrox gyroy gyroz] = read_mpu_arq();
+
+    display('O próximo arquivo é para a calibração');
+[bias_ax,bias_ay,bias_az,bias_gx,bias_gy,bias_gz] = bias_calculation(0,0,0,1);
+
+%% BIAS
+accx = accx - bias_ax;
+accy = accy - bias_ay;
+accz = accz - bias_az;
+
+gyrox = gyrox - bias_gx;
+gyroy = gyroy - bias_gy;
+gyroz = gyroz - bias_gz;
+
+%% Ângulos
+[acc_p acc_r gyro_y gyro_x] = angle_gyro_accel_mpu(accx,accy,accz,gyrox,gyroy,gyroz);
+
+%% Complementary Filter
+   cf_roll = zeros(length(accx),1);
+   cf_pitch = zeros(length(accx),1);
+   
+   cf_roll(1) = 0;
+   cf_pitch(1) = 0;
+   
+   a = 0.98;
+   
+   for i = 2:length(accx)
+      cf_pitch(i) = a*(cf_pitch(i-1)+gyro_y(i)-gyro_y(i-1))+(1-a)*acc_p(i);  
+      cf_roll(i) = a*(cf_roll(i-1)+gyro_x(i)-gyro_x(i-1))+(1-a)*acc_r(i);  
+   end
+   
+%% Plotagem
+   subplot(1,2,1);
+   plot(gyro_y,'-b');
+   hold on;
+   plot(acc_p,'-g');
+   plot(cf_pitch,'-r');
+  ylim([-pi/2 pi/2]);
+   legend('Gyro Angle','Accel_Angle','Complementary Filter');
+   title('PITCH');
+   
+   subplot(1,2,2);
+   plot(gyro_x,'-b');
+   hold on;
+   plot(acc_r,'-g');
+   plot(cf_roll,'-r');
+   ylim([-pi/2 pi/2]);
+   legend('Gyro Angle','Accel_Angle','Complementary Filter');
+   title('ROLL');
+
+end
+
